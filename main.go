@@ -231,6 +231,6 @@ func parseCmd() {
 	flag.StringVar(&cmdAddr, "addr", ":8012", "vpn server address in client mode\nbind address in server mode")
 	flag.StringVar(&cmdIpStart, "ip-start", "10.0.0.80", "ip start for client")
 	flag.StringVar(&cmdIpEnd, "ip-end", "10.0.0.100", "ip end for client")
-	flag.StringVar(&cmdIFaceBridge, "i", "eth0", "interface to bridge")
+	flag.StringVar(&cmdIFaceBridge, "i", "br-lan", "bridge interface")
 	flag.Parse()
 }

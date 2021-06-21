@@ -7,16 +7,9 @@ import (
 )
 
 func createBridge(tapName string) {
-	la := netlink.NewLinkAttrs()
-	la.Name = "br-tap"
-	bridge := &netlink.Bridge{LinkAttrs: la}
-	err := netlink.LinkAdd(bridge)
+	bridge, err := netlink.LinkByName(cmdIFaceBridge)
 	if err != nil {
-		log.Panicf("error on netlink.LinkAdd: %s", err.Error())
-	}
-	err = netlink.LinkSetUp(bridge)
-	if err != nil {
-		log.Panicf("error on netlink.LinkSetUp: %s", err.Error())
+		log.Panicf("error on netlink.LinkByName: %s", err.Error())
 	}
 
 	tap, err := netlink.LinkByName(tapName)
@@ -28,32 +21,6 @@ func createBridge(tapName string) {
 		log.Panicf("netlink.LinkSetUp error: %s", err.Error())
 	}
 	err = netlink.LinkSetMaster(tap, bridge)
-	if err != nil {
-		log.Panicf("error on netlink.LinkSetMaster: %s", err.Error())
-	}
-
-	eth, err := netlink.LinkByName(cmdIFaceBridge)
-	if err != nil {
-		log.Panicf("error on netlink.LinkByName: %s", err.Error())
-	}
-
-	addr, err := netlink.AddrList(eth, netlink.FAMILY_V4)
-	if err != nil {
-		log.Panicf("error on netlink.AddrList: %s", err.Error())
-	}
-	if len(addr) < 0 {
-		log.Panicf("error on netlink.AddrList: addr empty")
-	}
-	addr[0].Label = ""
-	err = netlink.AddrAdd(bridge, &addr[0])
-	if err != nil {
-		log.Panicf("error on netlink.AddrAdd: %s", err.Error())
-	}
-	err = netlink.AddrDel(eth, &addr[0])
-	if err != nil {
-		log.Panicf("error on netlink.AddrAdd: %s", err.Error())
-	}
-	err = netlink.LinkSetMaster(eth, bridge)
 	if err != nil {
 		log.Panicf("error on netlink.LinkSetMaster: %s", err.Error())
 	}
