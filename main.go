@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"runtime"
 	"sync"
 	"time"
 
@@ -19,10 +20,18 @@ var (
 
 func main() {
 	parseCmd()
+	config := water.Config{
+		DeviceType: water.TAP,
+	}
 
-	iface, err := water.New(water.Config{
-		DeviceType: water.TUN,
-	})
+	if runtime.GOOS == "darwin" {
+		config.PlatformSpecificParams = water.PlatformSpecificParams{
+			Name:   "tap0",
+			Driver: water.MacOSDriverTunTapOSX,
+		}
+	}
+
+	iface, err := water.New(config)
 	if err != nil {
 		log.Panicf("error on water new: %s", err.Error())
 	}
@@ -51,15 +60,6 @@ func main() {
 		})
 		http.ListenAndServe(cmdAddr, nil)
 	}
-
-	//packet := make([]byte, 2000)
-	//for {
-	//	n, err := iface.Read(packet)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	log.Printf("Packet Received: % x\n", packet[:n])
-	//}
 }
 
 func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
@@ -83,16 +83,6 @@ func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
 				log.Fatalf("error on ws.Write: %s", err.Error())
 			}
 		}
-
-		//wsWriter, err := ws.Writer(ctx, websocket.MessageBinary)
-		//if err != nil {
-		//	log.Panicf("error on ws.Writer: %s", err.Error())
-		//}
-		//
-		//_, err = io.Copy(wsWriter, iface)
-		//if err != nil {
-		//	log.Panicf("error on io.Copy(wsWriter, iface): %s", err.Error())
-		//}
 	}()
 	wg.Add(1)
 	go func() {
@@ -110,16 +100,6 @@ func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
 				log.Fatalf("error on iface.Write: %s", err.Error())
 			}
 		}
-
-		//_, wsReader, err := ws.Reader(ctx)
-		//if err != nil {
-		//	log.Panicf("error on ws.Reader: %s", err.Error())
-		//}
-		//
-		//_, err = io.Copy(iface, wsReader)
-		//if err != nil {
-		//	log.Panicf("error on io.Copy(iface, wsReader): %s", err.Error())
-		//}
 	}()
 	wg.Wait()
 }
