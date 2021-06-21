@@ -67,7 +67,7 @@ func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
 			if err != nil {
 				log.Fatalf("error on iface.Read: %s", err.Error())
 			}
-			log.Printf("Packet From tun: % x\n", packet[:n])
+			log.Printf("Packet From tap: % x\n", packet[:n])
 
 			err = ws.Write(ctx, websocket.MessageBinary, packet[:n])
 			if err != nil {
