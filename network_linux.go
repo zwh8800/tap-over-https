@@ -44,6 +44,7 @@ func createBridge(tapName string) {
 	if len(addr) < 0 {
 		log.Panicf("error on netlink.AddrList: addr empty")
 	}
+	addr[0].Label = ""
 	err = netlink.AddrAdd(bridge, &addr[0])
 	if err != nil {
 		log.Panicf("error on netlink.AddrAdd: %s", err.Error())
