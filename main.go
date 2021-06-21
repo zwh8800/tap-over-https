@@ -64,24 +64,19 @@ func main() {
 }
 
 func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-
-	_, wsReader, err := ws.Reader(ctx)
-	if err != nil {
-		log.Panicf("error on ws.Reader: %s", err.Error())
-	}
-
-	wsWriter, err := ws.Writer(ctx, websocket.MessageBinary)
-	if err != nil {
-		log.Panicf("error on ws.Writer: %s", err.Error())
-	}
+	ctx := context.Background()
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, err := io.Copy(wsWriter, iface)
+
+		wsWriter, err := ws.Writer(ctx, websocket.MessageBinary)
+		if err != nil {
+			log.Panicf("error on ws.Writer: %s", err.Error())
+		}
+
+		_, err = io.Copy(wsWriter, iface)
 		if err != nil {
 			log.Panicf("error on io.Copy(wsWriter, iface): %s", err.Error())
 		}
@@ -89,7 +84,13 @@ func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, err := io.Copy(iface, wsReader)
+
+		_, wsReader, err := ws.Reader(ctx)
+		if err != nil {
+			log.Panicf("error on ws.Reader: %s", err.Error())
+		}
+
+		_, err = io.Copy(iface, wsReader)
 		if err != nil {
 			log.Panicf("error on io.Copy(iface, wsReader): %s", err.Error())
 		}
