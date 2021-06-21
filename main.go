@@ -128,21 +128,7 @@ func main() {
 			log.Panicf("error on NewIPPool: %s", err.Error())
 		}
 
-		la := netlink.NewLinkAttrs()
-		la.Name = "br-tap"
-		bridge := &netlink.Bridge{LinkAttrs: la}
-		err = netlink.LinkAdd(bridge)
-		if err != nil {
-			log.Panicf("error on netlink.LinkAdd: %s", err.Error())
-		}
-		eth, err := netlink.LinkByName(cmdIFaceBridge)
-		if err != nil {
-			log.Panicf("error on netlink.LinkByName: %s", err.Error())
-		}
-		err = netlink.LinkSetMaster(eth, bridge)
-		if err != nil {
-			log.Panicf("error on netlink.LinkSetMaster: %s", err.Error())
-		}
+		createBridge(iface.Name())
 
 		http.HandleFunc("/vpn", func(w http.ResponseWriter, r *http.Request) {
 			ctx := context.Background()
@@ -162,6 +148,42 @@ func main() {
 		})
 		http.ListenAndServe(cmdAddr, nil)
 	}
+}
+
+func createBridge(tapName string) {
+	la := netlink.NewLinkAttrs()
+	la.Name = "br-tap"
+	bridge := &netlink.Bridge{LinkAttrs: la}
+	err := netlink.LinkAdd(bridge)
+	if err != nil {
+		log.Panicf("error on netlink.LinkAdd: %s", err.Error())
+	}
+	err = netlink.LinkSetUp(bridge)
+	if err != nil {
+		log.Panicf("error on netlink.LinkSetUp: %s", err.Error())
+	}
+
+	tap, err := netlink.LinkByName(tapName)
+	if err != nil {
+		log.Fatalf("netlink.LinkByName error: %s", err.Error())
+	}
+	err = netlink.LinkSetUp(tap)
+	if err != nil {
+		log.Fatalf("netlink.LinkSetUp error: %s", err.Error())
+	}
+	err = netlink.LinkSetMaster(tap, bridge)
+	if err != nil {
+		log.Panicf("error on netlink.LinkSetMaster: %s", err.Error())
+	}
+	//
+	//eth, err := netlink.LinkByName(cmdIFaceBridge)
+	//if err != nil {
+	//	log.Panicf("error on netlink.LinkByName: %s", err.Error())
+	//}
+	//err = netlink.LinkSetMaster(eth, bridge)
+	//if err != nil {
+	//	log.Panicf("error on netlink.LinkSetMaster: %s", err.Error())
+	//}
 }
 
 func assignIP(ctx context.Context, ipPool *IPv4Pool, ws *websocket.Conn) error {
@@ -203,6 +225,10 @@ func handleIPAssign(ctx context.Context, ws *websocket.Conn, iface *water.Interf
 	err = netlink.AddrAdd(ifaceLink, addr)
 	if err != nil {
 		log.Fatalf("netlink.AddrAdd error: %s", err.Error())
+	}
+	err = netlink.LinkSetUp(ifaceLink)
+	if err != nil {
+		log.Fatalf("netlink.LinkSetUp error: %s", err.Error())
 	}
 }
 
