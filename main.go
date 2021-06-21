@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"io"
 	"log"
 	"net/http"
 	"sync"
@@ -71,29 +70,56 @@ func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
 	go func() {
 		defer wg.Done()
 
-		wsWriter, err := ws.Writer(ctx, websocket.MessageBinary)
-		if err != nil {
-			log.Panicf("error on ws.Writer: %s", err.Error())
+		packet := make([]byte, 2000)
+		for {
+			n, err := iface.Read(packet)
+			if err != nil {
+				log.Fatalf("error on iface.Read: %s", err.Error())
+			}
+			log.Printf("Packet From tun: % x\n", packet[:n])
+
+			err = ws.Write(ctx, websocket.MessageBinary, packet)
+			if err != nil {
+				log.Fatalf("error on ws.Write: %s", err.Error())
+			}
 		}
 
-		_, err = io.Copy(wsWriter, iface)
-		if err != nil {
-			log.Panicf("error on io.Copy(wsWriter, iface): %s", err.Error())
-		}
+		//wsWriter, err := ws.Writer(ctx, websocket.MessageBinary)
+		//if err != nil {
+		//	log.Panicf("error on ws.Writer: %s", err.Error())
+		//}
+		//
+		//_, err = io.Copy(wsWriter, iface)
+		//if err != nil {
+		//	log.Panicf("error on io.Copy(wsWriter, iface): %s", err.Error())
+		//}
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
-		_, wsReader, err := ws.Reader(ctx)
-		if err != nil {
-			log.Panicf("error on ws.Reader: %s", err.Error())
+		for {
+			_, packet, err := ws.Read(ctx)
+			if err != nil {
+				log.Fatalf("error on ws.Read: %s", err.Error())
+			}
+			log.Printf("Packet From ws : % x\n", packet)
+
+			_, err = iface.Write(packet)
+			if err != nil {
+				log.Fatalf("error on iface.Write: %s", err.Error())
+			}
 		}
 
-		_, err = io.Copy(iface, wsReader)
-		if err != nil {
-			log.Panicf("error on io.Copy(iface, wsReader): %s", err.Error())
-		}
+		//_, wsReader, err := ws.Reader(ctx)
+		//if err != nil {
+		//	log.Panicf("error on ws.Reader: %s", err.Error())
+		//}
+		//
+		//_, err = io.Copy(iface, wsReader)
+		//if err != nil {
+		//	log.Panicf("error on io.Copy(iface, wsReader): %s", err.Error())
+		//}
 	}()
 	wg.Wait()
 }
