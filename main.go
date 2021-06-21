@@ -165,11 +165,11 @@ func createBridge(tapName string) {
 
 	tap, err := netlink.LinkByName(tapName)
 	if err != nil {
-		log.Fatalf("netlink.LinkByName error: %s", err.Error())
+		log.Panicf("netlink.LinkByName error: %s", err.Error())
 	}
 	err = netlink.LinkSetUp(tap)
 	if err != nil {
-		log.Fatalf("netlink.LinkSetUp error: %s", err.Error())
+		log.Panicf("netlink.LinkSetUp error: %s", err.Error())
 	}
 	err = netlink.LinkSetMaster(tap, bridge)
 	if err != nil {
@@ -195,7 +195,7 @@ func assignIP(ctx context.Context, ipPool *IPv4Pool, ws *websocket.Conn) error {
 	ipMsg = append([]byte{PacketTypeIPAssign}, ipMsg...)
 	err := ws.Write(ctx, websocket.MessageBinary, ipMsg)
 	if err != nil {
-		log.Fatalf("error on ws.Write: %s", err.Error())
+		log.Panicf("error on ws.Write: %s", err.Error())
 	}
 	return nil
 }
@@ -206,30 +206,31 @@ func handleIPAssign(ctx context.Context, ws *websocket.Conn, iface *water.Interf
 		log.Panicf("error on ws.Read: %s", err.Error())
 	}
 	if ipMsg[0] != PacketTypeIPAssign {
-		log.Fatalf("PacketTypeIPAssign type error: % x", ipMsg)
+		log.Panicf("PacketTypeIPAssign type error: % x", ipMsg)
 	}
 	var ipBody IPAssignBody
 	err = json.Unmarshal(ipMsg[1:], &ipBody)
 	if err != nil {
-		log.Fatalf("Packet type error: % x", ipMsg)
+		log.Panicf("Packet type error: % x", ipMsg)
 	}
+	log.Printf("handleIPAssign: %s", string(ipMsg[1:]))
 
-	ifaceLink, err := netlink.LinkByName(iface.Name())
-	if err != nil {
-		log.Fatalf("netlink.LinkByName error: %s", err.Error())
-	}
-	addr, err := netlink.ParseAddr(ipBody.IP)
-	if err != nil {
-		log.Fatalf("netlink.ParseAddr error: %s", err.Error())
-	}
-	err = netlink.AddrAdd(ifaceLink, addr)
-	if err != nil {
-		log.Fatalf("netlink.AddrAdd error: %s", err.Error())
-	}
-	err = netlink.LinkSetUp(ifaceLink)
-	if err != nil {
-		log.Fatalf("netlink.LinkSetUp error: %s", err.Error())
-	}
+	//ifaceLink, err := netlink.LinkByName(iface.Name())
+	//if err != nil {
+	//	log.Panicf("netlink.LinkByName error: %s", err.Error())
+	//}
+	//addr, err := netlink.ParseAddr(ipBody.IP)
+	//if err != nil {
+	//	log.Panicf("netlink.ParseAddr error: %s", err.Error())
+	//}
+	//err = netlink.AddrAdd(ifaceLink, addr)
+	//if err != nil {
+	//	log.Panicf("netlink.AddrAdd error: %s", err.Error())
+	//}
+	//err = netlink.LinkSetUp(ifaceLink)
+	//if err != nil {
+	//	log.Panicf("netlink.LinkSetUp error: %s", err.Error())
+	//}
 }
 
 func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
@@ -245,13 +246,13 @@ func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
 		for {
 			n, err := iface.Read(packet[1:])
 			if err != nil {
-				log.Fatalf("error on iface.Read: %s", err.Error())
+				log.Panicf("error on iface.Read: %s", err.Error())
 			}
 			log.Printf("Packet From tap: % x\n", packet[1:n+1])
 
 			err = ws.Write(ctx, websocket.MessageBinary, packet[:n+1])
 			if err != nil {
-				log.Fatalf("error on ws.Write: %s", err.Error())
+				log.Panicf("error on ws.Write: %s", err.Error())
 			}
 		}
 	}()
@@ -262,16 +263,16 @@ func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
 		for {
 			_, packet, err := ws.Read(ctx)
 			if err != nil {
-				log.Fatalf("error on ws.Read: %s", err.Error())
+				log.Panicf("error on ws.Read: %s", err.Error())
 			}
 			log.Printf("Packet From ws : % x\n", packet)
 			if len(packet) < 1 || packet[0] != PacketTypeData {
-				log.Fatalf("PacketTypeData type error: % x", packet)
+				log.Panicf("PacketTypeData type error: % x", packet)
 			}
 
 			_, err = iface.Write(packet[1:])
 			if err != nil {
-				log.Fatalf("error on iface.Write: %s", err.Error())
+				log.Panicf("error on iface.Write: %s", err.Error())
 			}
 		}
 	}()
