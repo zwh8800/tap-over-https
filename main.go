@@ -65,13 +65,13 @@ func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
 		for {
 			n, err := iface.Read(packet)
 			if err != nil {
-				log.Fatalf("error on iface.Read: %s", err.Error())
+				log.Printf("error on iface.Read: %s\n", err.Error())
 			}
 			log.Printf("Packet From tap: % x\n", packet[:n])
 
 			err = ws.Write(ctx, websocket.MessageBinary, packet[:n])
 			if err != nil {
-				log.Fatalf("error on ws.Write: %s", err.Error())
+				log.Printf("error on ws.Write: %s\n", err.Error())
 			}
 		}
 	}()
@@ -82,13 +82,13 @@ func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
 		for {
 			_, packet, err := ws.Read(ctx)
 			if err != nil {
-				log.Fatalf("error on ws.Read: %s", err.Error())
+				log.Printf("error on ws.Read: %s\n", err.Error())
 			}
 			log.Printf("Packet From ws : % x\n", packet)
 
 			_, err = iface.Write(packet)
 			if err != nil {
-				log.Fatalf("error on iface.Write: %s", err.Error())
+				log.Printf("error on iface.Write: %s\n", err.Error())
 			}
 		}
 	}()
