@@ -186,6 +186,12 @@ func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		defer func() {
+			err := recover()
+			if err != nil {
+				log.Printf("panic from read : %#v\n", err)
+			}
+		}()
 		defer wg.Done()
 
 		packet := make([]byte, 4*1024*1024)
@@ -205,6 +211,12 @@ func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
 	}()
 	wg.Add(1)
 	go func() {
+		defer func() {
+			err := recover()
+			if err != nil {
+				log.Printf("panic from read : %#v\n", err)
+			}
+		}()
 		defer wg.Done()
 
 		for {
