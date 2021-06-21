@@ -5,9 +5,10 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	"runtime"
 	"sync"
 	"time"
+
+	"github.com/zwh8800/tap-over-https/conf"
 
 	"github.com/songgao/water"
 	"nhooyr.io/websocket"
@@ -20,18 +21,8 @@ var (
 
 func main() {
 	parseCmd()
-	config := water.Config{
-		DeviceType: water.TAP,
-	}
 
-	if runtime.GOOS == "darwin" {
-		config.PlatformSpecificParams = water.PlatformSpecificParams{
-			Name:   "tap0",
-			Driver: water.MacOSDriverTunTapOSX,
-		}
-	}
-
-	iface, err := water.New(config)
+	iface, err := water.New(conf.Config)
 	if err != nil {
 		log.Panicf("error on water new: %s", err.Error())
 	}
