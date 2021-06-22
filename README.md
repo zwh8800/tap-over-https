@@ -4,13 +4,13 @@
 
 ## 使用方法
 
-编译/安装
+#### 编译/安装
 
 ```bash
 go install github.com/zwh8800/tap-over-https@latest
 ```
 
-启动服务端
+#### 启动服务端
 
 ```bash
 tap-over-https -s -addr :8012 -i br-lan
@@ -21,14 +21,14 @@ tap-over-https -s -addr :8012 -i br-lan
 
 -i 后跟一个linux桥接网卡，客户端连接过来后会被桥接到这个网卡上
 
-启动客户端
+#### 启动客户端
 ```bash
 tap-over-https -addr ws://www.baidu.com/vpn
 ```
 
 -addr 指定服务端的地址，需要以ws://或wss://为开头
 
-macOS需先安装tap网卡驱动
+#### macOS需先安装tap网卡驱动
 下载地址：https://sourceforge.net/p/tuntaposx
 
 ## 安全性
