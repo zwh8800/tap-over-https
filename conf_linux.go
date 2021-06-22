@@ -1,4 +1,4 @@
-package conf
+package main
 
 import "github.com/songgao/water"
 

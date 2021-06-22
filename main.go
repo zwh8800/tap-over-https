@@ -13,8 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zwh8800/tap-over-https/conf"
-
 	"github.com/songgao/water"
 	"nhooyr.io/websocket"
 )
@@ -98,7 +96,7 @@ func (p *IPv4Pool) Put(ip net.IP) {
 func main() {
 	parseCmd()
 
-	iface, err := water.New(conf.Config)
+	iface, err := water.New(Config)
 	if err != nil {
 		log.Panicf("error on water new: %s", err.Error())
 	}
