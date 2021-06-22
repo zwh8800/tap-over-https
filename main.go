@@ -182,6 +182,10 @@ func (b *BroadcastDomain) Join(rw io.ReadWriteCloser) int {
 func (b *BroadcastDomain) Leave(id int) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	peer := b.peers[id]
+	if peer != nil {
+		peer.rw.Close()
+	}
 	delete(b.peers, id)
 }
 
