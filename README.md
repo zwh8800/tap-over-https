@@ -21,6 +21,10 @@ tap-over-https -s -addr :8012 -i br-lan
 
 -i 后跟一个linux桥接网卡，客户端连接过来后会被桥接到这个网卡上
 
+-ip-start 后跟一个ip地址，代表分配给客户端的起始ip
+
+-ip-end 后跟一个ip地址，代表分配给客户端的终止ip
+
 #### 启动客户端
 ```bash
 tap-over-https -addr ws://www.baidu.com/vpn
