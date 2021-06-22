@@ -7,7 +7,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"sync"
@@ -93,6 +95,96 @@ func (p *IPv4Pool) Put(ip net.IP) {
 	delete(p.pool, binary.BigEndian.Uint32(ip))
 }
 
+type BroadcastDomain struct {
+	mu    sync.Mutex
+	peers map[int]*broadcastPeer
+}
+
+type broadcastPeer struct {
+	id int
+	rw io.ReadWriteCloser
+	mu sync.Mutex
+}
+
+func NewBroadcastDomain() *BroadcastDomain {
+	return &BroadcastDomain{
+		mu:    sync.Mutex{},
+		peers: make(map[int]*broadcastPeer),
+	}
+}
+
+func (b *BroadcastDomain) Join(rw io.ReadWriteCloser) int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	id := rand.Intn(1000)
+	i := 0
+	for ; i < 3; i++ {
+		if _, ok := b.peers[id]; !ok {
+			break
+		}
+		id = rand.Intn(100)
+	}
+	if i == 3 {
+		log.Panicf("you are so lucky")
+	}
+
+	b.peers[id] = &broadcastPeer{
+		id: id,
+		rw: rw,
+		mu: sync.Mutex{},
+	}
+
+	go func() {
+		defer func() {
+			err := recover()
+			if err != nil {
+				log.Printf("panic on rw read: %#v", err)
+				b.Leave(id)
+			}
+		}()
+		for {
+			buffer := make([]byte, 2048)
+
+			n, err := rw.Read(buffer)
+			if err != nil {
+				log.Panicf("error on rw.Read: %s", err.Error())
+			}
+			//log.Printf("Packet From %04d: % x\n", id, buffer[:n])
+
+			b.mu.Lock()
+			for peerID, peer := range b.peers {
+				if peerID == id {
+					continue
+				}
+				go func(peer *broadcastPeer) {
+					defer func() {
+						err := recover()
+						if err != nil {
+							log.Printf("panic on rw write: %#v", err)
+							b.Leave(peer.id)
+						}
+					}()
+					peer.mu.Lock()
+					defer peer.mu.Unlock()
+					_, err := peer.rw.Write(buffer[:n])
+					if err != nil {
+						log.Panicf("error on rw.Write: %s", err.Error())
+					}
+
+				}(peer)
+			}
+			b.mu.Unlock()
+		}
+	}()
+	return id
+}
+
+func (b *BroadcastDomain) Leave(id int) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	delete(b.peers, id)
+}
+
 func main() {
 	parseCmd()
 
@@ -126,6 +218,10 @@ func main() {
 
 		createBridge(iface.Name())
 
+		broadcastDomain := NewBroadcastDomain()
+
+		broadcastDomain.Join(iface)
+
 		http.HandleFunc("/vpn", func(w http.ResponseWriter, r *http.Request) {
 			ctx := context.Background()
 
@@ -133,17 +229,49 @@ func main() {
 			if err != nil {
 				log.Panicf("error on websocket.Accept: %s", err.Error())
 			}
-			defer ws.Close(websocket.StatusNormalClosure, "bye")
+			//defer ws.Close(websocket.StatusNormalClosure, "bye")
 
 			if err := assignIP(ctx, ipPool, ws); err != nil {
 				ws.Write(ctx, websocket.MessageText, []byte(err.Error()))
 				return
 			}
 
-			connectTunnel(ws, iface)
+			broadcastDomain.Join(wsWrapper{ws})
+
+			//connectTunnel(ws, iface)
 		})
 		http.ListenAndServe(cmdAddr, nil)
 	}
+}
+
+type wsWrapper struct {
+	c *websocket.Conn
+}
+
+func (w wsWrapper) Read(p []byte) (int, error) {
+	ctx := context.Background()
+	_, data, err := w.c.Read(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if len(data) < 1 || data[0] != PacketTypeData {
+		return 0, fmt.Errorf("PacketTypeData type error: % x", data)
+	}
+
+	return copy(p, data[1:]), nil
+}
+
+func (w wsWrapper) Write(p []byte) (int, error) {
+	ctx := context.Background()
+	err := w.c.Write(ctx, websocket.MessageBinary, append([]byte{PacketTypeData}, p...))
+	if err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
+
+func (w wsWrapper) Close() error {
+	return w.c.Close(websocket.StatusNormalClosure, "bye")
 }
 
 func assignIP(ctx context.Context, ipPool *IPv4Pool, ws *websocket.Conn) error {
