@@ -1,24 +1,24 @@
 package main
 
+import (
+	"log"
+	"net"
+	"os/exec"
+)
+
 func createBridge(tapName string) {
 	panic("not implement")
 }
 
 func setupTapAddr(tapName string, ipBody *IPAssignBody) {
-	//ifaceLink, err := netlink.LinkByName(tapName)
-	//if err != nil {
-	//	log.Panicf("netlink.LinkByName error: %s", err.Error())
-	//}
-	//addr, err := netlink.ParseAddr(ipBody.IP)
-	//if err != nil {
-	//	log.Panicf("netlink.ParseAddr error: %s", err.Error())
-	//}
-	//err = netlink.AddrAdd(ifaceLink, addr)
-	//if err != nil {
-	//	log.Panicf("netlink.AddrAdd error: %s", err.Error())
-	//}
-	//err = netlink.LinkSetUp(ifaceLink)
-	//if err != nil {
-	//	log.Panicf("netlink.LinkSetUp error: %s", err.Error())
-	//}
+	ip := net.ParseIP(ipBody.IP)
+	if ip == nil {
+		log.Panicf("assigned ip not valid: %s", ipBody.IP)
+	}
+
+	cmd := exec.Command("ifconfig", tapName, ip.To4().String(), "up")
+	err := cmd.Run()
+	if err != nil {
+		log.Panicf("cmd.Run error: %s", err.Error())
+	}
 }
