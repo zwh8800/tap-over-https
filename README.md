@@ -16,7 +16,9 @@ go install github.com/zwh8800/tap-over-https@latest
 tap-over-https -s -addr :8012 -i br-lan
 ```
 -s 参数代表以服务器模式启动
+
 -addr 指定websocket绑定端口
+
 -i 后跟一个linux桥接网卡，客户端连接过来后会被桥接到这个网卡上
 
 启动客户端
