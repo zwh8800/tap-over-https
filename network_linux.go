@@ -31,7 +31,7 @@ func setupTapAddr(tapName string, ipBody *IPAssignBody) {
 	if err != nil {
 		log.Panicf("netlink.LinkByName error: %s", err.Error())
 	}
-	addr, err := netlink.ParseAddr(ipBody.IP)
+	addr, err := netlink.ParseAddr(ipBody.IP + "/24")
 	if err != nil {
 		log.Panicf("netlink.ParseAddr error: %s", err.Error())
 	}
