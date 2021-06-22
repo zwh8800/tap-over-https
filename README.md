@@ -28,3 +28,6 @@ tap-over-https -addr ws://www.baidu.com/vpn
 
 macOS需先安装tap网卡驱动
 下载地址：https://sourceforge.net/p/tuntaposx
+
+## 安全性
+本身不具备安全性，websocket协议全是明文的，为了安全性使用时可以前面加一个nginx/caddy，配置上https，再加上个http basic auth，能比明文裸奔强一些吧（大概
