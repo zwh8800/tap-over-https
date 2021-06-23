@@ -16,6 +16,8 @@ jobs:
         exclude:  
           - goarch: "386"
             goos: darwin 
+    env:
+      CGO_ENABLED: 0
     steps:
     - uses: actions/checkout@v2
     - uses: wangyoucao577/go-release-action@v1.18
