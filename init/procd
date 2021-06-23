@@ -1,0 +1,30 @@
+#!/bin/sh /etc/rc.common
+#
+# Copyright (C) 2021 tap-over-https
+#
+# This is free software, licensed under the GNU General Public License v3.
+# See /LICENSE for more information.
+#
+
+USE_PROCD=1
+
+START=99
+STOP=99
+
+start_service() {
+    echo start tap-over-https
+    procd_open_instance tap-over-https
+    procd_set_param command /usr/bin/tap-over-https -s # service executable that has to run in **foreground**.
+
+    # respawn automatically if something died, be careful if you have an alternative process supervisor
+    # if process dies sooner than respawn_threshold, it is considered crashed and after 5 retries the service is stopped
+    procd_set_param respawn ${respawn_threshold:-3600} ${respawn_timeout:-5} ${respawn_retry:-5}
+
+    procd_set_param stdout 1 # forward stdout of the command to logd
+    procd_set_param stderr 1 # same for stderr
+    procd_set_param user root # run service as user nobody
+    procd_set_param pidfile /var/run/tap-over-https.pid # write a pid file on instance start and remove it on stop
+    procd_close_instance
+
+    echo tap-over-https started
+}
