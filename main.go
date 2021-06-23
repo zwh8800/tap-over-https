@@ -12,7 +12,10 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/songgao/water"
@@ -200,52 +203,65 @@ func main() {
 	log.Printf("iface: %s", iface.Name())
 
 	if !cmdIsServer {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		ws, _, err := websocket.Dial(ctx, cmdAddr, nil)
-		if err != nil {
-			log.Panicf("error on websocket.Dial: %s", err.Error())
-		}
-		defer ws.Close(websocket.StatusNormalClosure, "bye")
-
-		handleIPAssign(ctx, ws, iface)
-
-		connectTunnel(ws, iface)
+		runAsClient(iface)
 	} else {
-		startIP := net.ParseIP(cmdIpStart)
-		endIP := net.ParseIP(cmdIpEnd)
-		ipPool, err := NewIPPool(startIP, endIP)
+		runAsServer(iface)
+	}
+}
+
+func runAsServer(iface *water.Interface) {
+	startIP := net.ParseIP(cmdIpStart)
+	endIP := net.ParseIP(cmdIpEnd)
+	ipPool, err := NewIPPool(startIP, endIP)
+	if err != nil {
+		log.Panicf("error on NewIPPool: %s", err.Error())
+	}
+
+	createBridge(iface.Name())
+
+	broadcastDomain := NewBroadcastDomain()
+	broadcastDomain.Join(iface)
+
+	http.HandleFunc("/vpn", func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.Background()
+
+		ws, err := websocket.Accept(w, r, nil)
 		if err != nil {
-			log.Panicf("error on NewIPPool: %s", err.Error())
+			log.Panicf("error on websocket.Accept: %s", err.Error())
 		}
 
-		createBridge(iface.Name())
+		if err := assignIP(ctx, ipPool, ws); err != nil {
+			ws.Write(ctx, websocket.MessageText, []byte(err.Error()))
+			return
+		}
 
-		broadcastDomain := NewBroadcastDomain()
+		broadcastDomain.Join(wsWrapper{ws})
+	})
+	http.ListenAndServe(cmdAddr, nil)
+}
 
-		broadcastDomain.Join(iface)
+func runAsClient(iface *water.Interface) {
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
-		http.HandleFunc("/vpn", func(w http.ResponseWriter, r *http.Request) {
-			ctx := context.Background()
-
-			ws, err := websocket.Accept(w, r, nil)
-			if err != nil {
-				log.Panicf("error on websocket.Accept: %s", err.Error())
-			}
-			//defer ws.Close(websocket.StatusNormalClosure, "bye")
-
-			if err := assignIP(ctx, ipPool, ws); err != nil {
-				ws.Write(ctx, websocket.MessageText, []byte(err.Error()))
-				return
-			}
-
-			broadcastDomain.Join(wsWrapper{ws})
-
-			//connectTunnel(ws, iface)
-		})
-		http.ListenAndServe(cmdAddr, nil)
+	ws, _, err := websocket.Dial(ctx, cmdAddr, nil)
+	if err != nil {
+		log.Panicf("error on websocket.Dial: %s", err.Error())
 	}
+
+	handleIPAssign(ctx, ws, iface)
+
+	broadcastDomain := NewBroadcastDomain()
+	broadcastDomain.Join(iface)
+	id := broadcastDomain.Join(wsWrapper{ws})
+
+	waitSignal(syscall.SIGINT, syscall.SIGTERM)
+	broadcastDomain.Leave(id)
+}
+
+func waitSignal(sig ...os.Signal) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, sig...)
+	<-c
 }
 
 type wsWrapper struct {
@@ -308,64 +324,6 @@ func handleIPAssign(ctx context.Context, ws *websocket.Conn, iface *water.Interf
 	log.Printf("handleIPAssign: %s", string(ipMsg[1:]))
 
 	setupTapAddr(iface.Name(), &ipBody)
-}
-
-func connectTunnel(ws *websocket.Conn, iface *water.Interface) {
-	ctx := context.Background()
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer func() {
-			err := recover()
-			if err != nil {
-				log.Printf("panic from read : %#v\n", err)
-			}
-		}()
-		defer wg.Done()
-
-		packet := make([]byte, 4*1024*1024)
-		packet[0] = PacketTypeData
-		for {
-			n, err := iface.Read(packet[1:])
-			if err != nil {
-				log.Panicf("error on iface.Read: %s", err.Error())
-			}
-			log.Printf("Packet From tap: % x\n", packet[1:n+1])
-
-			err = ws.Write(ctx, websocket.MessageBinary, packet[:n+1])
-			if err != nil {
-				log.Panicf("error on ws.Write: %s", err.Error())
-			}
-		}
-	}()
-	wg.Add(1)
-	go func() {
-		defer func() {
-			err := recover()
-			if err != nil {
-				log.Printf("panic from read : %#v\n", err)
-			}
-		}()
-		defer wg.Done()
-
-		for {
-			_, packet, err := ws.Read(ctx)
-			if err != nil {
-				log.Panicf("error on ws.Read: %s", err.Error())
-			}
-			log.Printf("Packet From ws : % x\n", packet)
-			if len(packet) < 1 || packet[0] != PacketTypeData {
-				log.Panicf("PacketTypeData type error: % x", packet)
-			}
-
-			_, err = iface.Write(packet[1:])
-			if err != nil {
-				log.Panicf("error on iface.Write: %s", err.Error())
-			}
-		}
-	}()
-	wg.Wait()
 }
 
 func parseCmd() {
