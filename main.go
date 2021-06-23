@@ -148,9 +148,8 @@ func (b *BroadcastDomain) Join(rw io.ReadWriteCloser, needLock bool) int {
 				b.Leave(id)
 			}
 		}()
+		buffer := make([]byte, 2048)
 		for {
-			buffer := make([]byte, 2048)
-
 			n, err := rw.Read(buffer)
 			if err != nil {
 				log.Panicf("error on rw.Read: %s", err.Error())
@@ -158,11 +157,14 @@ func (b *BroadcastDomain) Join(rw io.ReadWriteCloser, needLock bool) int {
 			//log.Printf("Packet From %04d: % x\n", id, buffer[:n])
 
 			b.mu.Lock()
+			var wg sync.WaitGroup
 			for peerID, peer := range b.peers {
 				if peerID == id {
 					continue
 				}
+				wg.Add(1)
 				go func(peer *broadcastPeer) {
+					defer wg.Done()
 					defer func() {
 						err := recover()
 						if err != nil {
@@ -181,6 +183,7 @@ func (b *BroadcastDomain) Join(rw io.ReadWriteCloser, needLock bool) int {
 
 				}(peer)
 			}
+			wg.Wait()
 			b.mu.Unlock()
 		}
 	}()
