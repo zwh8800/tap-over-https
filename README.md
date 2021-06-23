@@ -6,9 +6,16 @@
 
 #### 编译/安装
 
+通过源码安装
+
 ```bash
 go install github.com/zwh8800/tap-over-https@latest
 ```
+
+下载预编译包
+
+https://github.com/zwh8800/tap-over-https/releases
+
 
 #### 启动服务端
 
