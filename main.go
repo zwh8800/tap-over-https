@@ -100,8 +100,7 @@ func (p *IPv4Pool) Put(ip net.IP) {
 }
 
 type BroadcastDomain struct {
-	mu    sync.Mutex
-	peers map[int]*broadcastPeer
+	peers sync.Map
 }
 
 type broadcastPeer struct {
@@ -112,19 +111,14 @@ type broadcastPeer struct {
 }
 
 func NewBroadcastDomain() *BroadcastDomain {
-	return &BroadcastDomain{
-		mu:    sync.Mutex{},
-		peers: make(map[int]*broadcastPeer),
-	}
+	return &BroadcastDomain{}
 }
 
 func (b *BroadcastDomain) Join(rw io.ReadWriteCloser, needLock bool) int {
-	b.mu.Lock()
-	defer b.mu.Unlock()
 	id := rand.Intn(1000)
 	i := 0
 	for ; i < 3; i++ {
-		if _, ok := b.peers[id]; !ok {
+		if _, ok := b.peers.Load(id); !ok {
 			break
 		}
 		id = rand.Intn(100)
@@ -133,12 +127,12 @@ func (b *BroadcastDomain) Join(rw io.ReadWriteCloser, needLock bool) int {
 		log.Panicf("you are so lucky")
 	}
 
-	b.peers[id] = &broadcastPeer{
+	b.peers.Store(id, &broadcastPeer{
 		id:       id,
 		rw:       rw,
 		mu:       sync.Mutex{},
 		needLock: needLock,
-	}
+	})
 
 	go func() {
 		defer func() {
@@ -156,11 +150,12 @@ func (b *BroadcastDomain) Join(rw io.ReadWriteCloser, needLock bool) int {
 			}
 			//log.Printf("Packet From %04d: % x\n", id, buffer[:n])
 
-			b.mu.Lock()
 			var wg sync.WaitGroup
-			for peerID, peer := range b.peers {
+			b.peers.Range(func(key, value interface{}) bool {
+				peerID, peer := key.(int), value.(*broadcastPeer)
+
 				if peerID == id {
-					continue
+					return true
 				}
 				wg.Add(1)
 				go func(peer *broadcastPeer) {
@@ -182,22 +177,19 @@ func (b *BroadcastDomain) Join(rw io.ReadWriteCloser, needLock bool) int {
 					}
 
 				}(peer)
-			}
+				return true
+			})
 			wg.Wait()
-			b.mu.Unlock()
 		}
 	}()
 	return id
 }
 
 func (b *BroadcastDomain) Leave(id int) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	peer := b.peers[id]
-	if peer != nil {
-		peer.rw.Close()
+	peer, ok := b.peers.LoadAndDelete(id)
+	if ok {
+		peer.(*broadcastPeer).rw.Close()
 	}
-	delete(b.peers, id)
 }
 
 func main() {
