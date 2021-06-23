@@ -18,7 +18,7 @@ func setupTapAddr(tapName string, ipBody *IPAssignBody) {
 	}
 
 	cmd := exec.Command("netsh", "interface", "ip", "set", "address",
-		fmt.Sprintf(`name="%s"`, tapName),
+		fmt.Sprintf(`name=%s`, tapName),
 		"source=static",
 		fmt.Sprintf("addr=%s", ip.To4().String()),
 		"mask=255.255.255.0",
