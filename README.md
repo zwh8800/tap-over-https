@@ -44,6 +44,7 @@ tap-over-https -addr ws://www.baidu.com/vpn
 
 #### windows需先安装tap网卡驱动
 下载地址：http://build.openvpn.net/downloads/releases/
+
 win7需下载老版本：https://build.openvpn.net/downloads/releases/tap-windows-9.9.2_3.exe
 
 ## 安全性
