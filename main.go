@@ -99,7 +99,8 @@ func (p *IPv4Pool) Put(ip net.IP) {
 }
 
 type BroadcastDomain struct {
-	peers sync.Map
+	peers   sync.Map
+	onLeave func(id int)
 }
 
 type broadcastPeer struct {
@@ -189,6 +190,13 @@ func (b *BroadcastDomain) Leave(id int) {
 	if ok {
 		peer.(*broadcastPeer).rw.Close()
 	}
+	if b.onLeave != nil {
+		b.onLeave(id)
+	}
+}
+
+func (b *BroadcastDomain) OnLeave(onLeave func(id int)) {
+	b.onLeave = onLeave
 }
 
 func main() {
@@ -221,6 +229,14 @@ func runAsServer(iface *water.Interface) {
 	broadcastDomain := NewBroadcastDomain()
 	broadcastDomain.Join(iface, true)
 
+	id2ip := make(map[int]net.IP)
+	broadcastDomain.OnLeave(func(id int) {
+		ip, ok := id2ip[id]
+		if ok {
+			ipPool.Put(ip)
+		}
+	})
+
 	http.HandleFunc("/vpn", func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.Background()
 
@@ -231,12 +247,14 @@ func runAsServer(iface *water.Interface) {
 			log.Panicf("error on websocket.Accept: %s", err.Error())
 		}
 
-		if err := assignIP(ctx, ipPool, ws); err != nil {
+		ip, err := assignIP(ctx, ipPool, ws)
+		if err != nil {
 			ws.Write(ctx, websocket.MessageText, []byte(err.Error()))
 			return
 		}
 
-		broadcastDomain.Join(wsWrapper{ws}, false)
+		id := broadcastDomain.Join(wsWrapper{ws}, false)
+		id2ip[id] = ip
 	})
 	http.ListenAndServe(cmdAddr, nil)
 }
@@ -297,10 +315,10 @@ func (w wsWrapper) Close() error {
 	return w.c.Close(websocket.StatusNormalClosure, "bye")
 }
 
-func assignIP(ctx context.Context, ipPool *IPv4Pool, ws *websocket.Conn) error {
+func assignIP(ctx context.Context, ipPool *IPv4Pool, ws *websocket.Conn) (net.IP, error) {
 	ip := ipPool.Get()
 	if ip == nil {
-		return errors.New("ip pool empty")
+		return nil, errors.New("ip pool empty")
 	}
 	ipMsg, _ := json.Marshal(IPAssignBody{IP: ip.To4().String()})
 	ipMsg = append([]byte{PacketTypeIPAssign}, ipMsg...)
@@ -308,7 +326,7 @@ func assignIP(ctx context.Context, ipPool *IPv4Pool, ws *websocket.Conn) error {
 	if err != nil {
 		log.Panicf("error on ws.Write: %s", err.Error())
 	}
-	return nil
+	return ip, nil
 }
 
 func handleIPAssign(ctx context.Context, ws *websocket.Conn, iface *water.Interface) {
