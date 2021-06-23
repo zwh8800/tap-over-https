@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"sync"
@@ -104,9 +105,10 @@ type BroadcastDomain struct {
 }
 
 type broadcastPeer struct {
-	id int
-	rw io.ReadWriteCloser
-	mu sync.Mutex
+	id       int
+	rw       io.ReadWriteCloser
+	mu       sync.Mutex
+	needLock bool
 }
 
 func NewBroadcastDomain() *BroadcastDomain {
@@ -116,7 +118,7 @@ func NewBroadcastDomain() *BroadcastDomain {
 	}
 }
 
-func (b *BroadcastDomain) Join(rw io.ReadWriteCloser) int {
+func (b *BroadcastDomain) Join(rw io.ReadWriteCloser, needLock bool) int {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	id := rand.Intn(1000)
@@ -132,9 +134,10 @@ func (b *BroadcastDomain) Join(rw io.ReadWriteCloser) int {
 	}
 
 	b.peers[id] = &broadcastPeer{
-		id: id,
-		rw: rw,
-		mu: sync.Mutex{},
+		id:       id,
+		rw:       rw,
+		mu:       sync.Mutex{},
+		needLock: needLock,
 	}
 
 	go func() {
@@ -167,8 +170,10 @@ func (b *BroadcastDomain) Join(rw io.ReadWriteCloser) int {
 							b.Leave(peer.id)
 						}
 					}()
-					peer.mu.Lock()
-					defer peer.mu.Unlock()
+					if peer.needLock {
+						peer.mu.Lock()
+						defer peer.mu.Unlock()
+					}
 					_, err := peer.rw.Write(buffer[:n])
 					if err != nil {
 						log.Panicf("error on rw.Write: %s", err.Error())
@@ -220,12 +225,14 @@ func runAsServer(iface *water.Interface) {
 	createBridge(iface.Name())
 
 	broadcastDomain := NewBroadcastDomain()
-	broadcastDomain.Join(iface)
+	broadcastDomain.Join(iface, true)
 
 	http.HandleFunc("/vpn", func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.Background()
 
-		ws, err := websocket.Accept(w, r, nil)
+		ws, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+			CompressionMode: websocket.CompressionDisabled,
+		})
 		if err != nil {
 			log.Panicf("error on websocket.Accept: %s", err.Error())
 		}
@@ -235,7 +242,7 @@ func runAsServer(iface *water.Interface) {
 			return
 		}
 
-		broadcastDomain.Join(wsWrapper{ws})
+		broadcastDomain.Join(wsWrapper{ws}, false)
 	})
 	http.ListenAndServe(cmdAddr, nil)
 }
@@ -243,7 +250,9 @@ func runAsServer(iface *water.Interface) {
 func runAsClient(iface *water.Interface) {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
-	ws, _, err := websocket.Dial(ctx, cmdAddr, nil)
+	ws, _, err := websocket.Dial(ctx, cmdAddr, &websocket.DialOptions{
+		CompressionMode: websocket.CompressionDisabled,
+	})
 	if err != nil {
 		log.Panicf("error on websocket.Dial: %s", err.Error())
 	}
@@ -251,8 +260,8 @@ func runAsClient(iface *water.Interface) {
 	handleIPAssign(ctx, ws, iface)
 
 	broadcastDomain := NewBroadcastDomain()
-	broadcastDomain.Join(iface)
-	id := broadcastDomain.Join(wsWrapper{ws})
+	broadcastDomain.Join(iface, true)
+	id := broadcastDomain.Join(wsWrapper{ws}, false)
 
 	waitSignal(syscall.SIGINT, syscall.SIGTERM)
 	broadcastDomain.Leave(id)
