@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"log"
@@ -7,7 +7,7 @@ import (
 )
 
 func createBridge(tapName string) {
-	bridge, err := netlink.LinkByName(cmdIFaceBridge)
+	bridge, err := netlink.LinkByName(main.cmdIFaceBridge)
 	if err != nil {
 		log.Panicf("error on netlink.LinkByName: %s", err.Error())
 	}
