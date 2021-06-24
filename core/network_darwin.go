@@ -6,7 +6,7 @@ import (
 	"os/exec"
 )
 
-func createBridge(tapName string) {
+func createBridge(bridgeName, tapName string) {
 	panic("not implement")
 }
 

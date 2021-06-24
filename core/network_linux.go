@@ -6,8 +6,8 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func createBridge(tapName string) {
-	bridge, err := netlink.LinkByName(main.cmdIFaceBridge)
+func createBridge(bridgeName, tapName string) {
+	bridge, err := netlink.LinkByName(bridgeName)
 	if err != nil {
 		log.Panicf("error on netlink.LinkByName: %s", err.Error())
 	}

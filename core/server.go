@@ -38,7 +38,7 @@ func (s *Server) Run() {
 
 	log.Printf("iface: %s", iface.Name())
 
-	createBridge(iface.Name())
+	createBridge(s.iFaceBridge, iface.Name())
 
 	broadcastDomain := NewBroadcastDomain()
 	broadcastDomain.Join(iface, true)
