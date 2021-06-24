@@ -10,10 +10,10 @@ import (
 	"github.com/zwh8800/tap-over-https/core"
 )
 
-//go:embed icon1.png
+//go:embed icon1.ico
 var iconStopped []byte
 
-//go:embed icon2.png
+//go:embed icon2.ico
 var iconRunning []byte
 
 type runStatus int
