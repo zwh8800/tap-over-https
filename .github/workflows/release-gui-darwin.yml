@@ -17,11 +17,13 @@ jobs:
       - uses: actions/checkout@v2
       - name: "Build & test"
         run: |
-          go build && tar zcvf tap-over-https-gui-$(basename ${GITHUB_REF})-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz tap-over-https-gui
+          cd cmd/tap-over-https-gui && |
+          go build && |
+          tar zcvf tap-over-https-gui-$(basename ${GITHUB_REF})-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz tap-over-https-gui
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
           files: |
-            LICENSE.txt
-            *.jar
+            tap-over-https-gui-$(basename ${GITHUB_REF})-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+            
