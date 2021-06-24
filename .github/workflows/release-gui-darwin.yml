@@ -18,11 +18,12 @@ jobs:
       - name: "Golang env"
         run: |
           wget --progress=dot:mega -O go-linux.tar.gz https://golang.org/dl/go1.16.5.darwin-amd64.tar.gz &&
-          sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go-linux.tar.gz &&
+          mkdir -p $HOME/go1.16 && tar -C $HOME/go1.16 -xzf go-linux.tar.gz &&
           mkdir -p $HOME/go/bin $HOME/go/src $HOME/go/pkg &&
-          export GO_HOME=/usr/local/go &&
+          export GO_HOME=$HOME/go1.16/go &&
           export GOPATH=$HOME/go &&
-          export PATH=${GOPATH}/bin:${GO_HOME}/bin/:$PATH
+          export PATH=${GOPATH}/bin:${GO_HOME}/bin/:$PATH &&
+          go version
 
       - name: "Build"
         run: |
