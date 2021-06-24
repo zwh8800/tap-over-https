@@ -2,8 +2,7 @@
 
 <a href="https://sm.ms/image/yx9KtBOobZehzH1" target="_blank"><img align="left" width="100" hspace="5" vspace="5" src="https://i.loli.net/2021/06/24/yx9KtBOobZehzH1.png" ></a>通过websocket协议建立vpn链接，服务端可以部署在openwrt等linux软路由，客户端目前支持Windows、mac、linux（有GUI版本），方便在公司等外部环境访问家庭内网。
 
-
-
+<br><br><br><br><br>
 
 ## 截图
 <a href="https://sm.ms/image/OfpDhonMQjiBHJG" target="_blank"><img width="200" src="https://i.loli.net/2021/06/24/OfpDhonMQjiBHJG.jpg" ></a>
