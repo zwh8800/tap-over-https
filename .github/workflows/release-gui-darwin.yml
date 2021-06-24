@@ -33,7 +33,8 @@ jobs:
           go version &&
           cd cmd/tap-over-https-gui &&
           go build &&
-          tar zcvf tap-over-https-gui-$(basename ${GITHUB_REF})-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz tap-over-https-gui
+          tar zcvf tap-over-https-gui-$(basename ${GITHUB_REF})-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz tap-over-https-gui &&
+          ls -lh
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
