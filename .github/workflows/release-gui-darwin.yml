@@ -15,7 +15,16 @@ jobs:
         goarch: [amd64]
     steps:
       - uses: actions/checkout@v2
-      - name: "Build & test"
+      - name: "Golang env"
+        run: |
+          wget --progress=dot:mega -O go-linux.tar.gz https://golang.org/dl/go1.16.5.darwin-amd64.tar.gz &&
+          rm -rf /usr/local/go && tar -C /usr/local -xzf &&
+          mkdir -p $HOME/go/bin $HOME/go/src $HOME/go/pkg &&
+          export GO_HOME=/usr/local/go &&
+          export GOPATH=$HOME/go &&
+          export PATH=${GOPATH}/bin:${GO_HOME}/bin/:$PATH
+
+      - name: "Build"
         run: |
           cd cmd/tap-over-https-gui &&
           go build &&
