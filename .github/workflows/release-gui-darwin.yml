@@ -27,6 +27,10 @@ jobs:
 
       - name: "Build"
         run: |
+          export GO_HOME=$HOME/go1.16/go &&
+          export GOPATH=$HOME/go &&
+          export PATH=${GOPATH}/bin:${GO_HOME}/bin/:$PATH &&
+          go version &&
           cd cmd/tap-over-https-gui &&
           go build &&
           tar zcvf tap-over-https-gui-$(basename ${GITHUB_REF})-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz tap-over-https-gui
