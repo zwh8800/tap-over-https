@@ -14,6 +14,8 @@ jobs:
         goos: [linux]
         goarch: ["386", amd64]
     steps:
+      - name: install gtk
+        run: sudo apt-get install gcc libgtk-3-dev libappindicator3-dev
       - uses: actions/checkout@v2
       - uses: wangyoucao577/go-release-action@v1.18
         with:
@@ -22,5 +24,4 @@ jobs:
           goarch: ${{ matrix.goarch }}
           project_path: ./cmd/tap-over-https-gui
           binary_name: tap-over-https-gui
-          pre_command: sudo apt-get install gcc libgtk-3-dev libappindicator3-dev
           extra_files: README.md
