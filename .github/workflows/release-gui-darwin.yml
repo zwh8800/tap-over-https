@@ -15,11 +15,13 @@ jobs:
         goarch: [amd64]
     steps:
       - uses: actions/checkout@v2
-      - uses: wangyoucao577/go-release-action@v1.18
+      - name: "Build & test"
+        run: |
+          go build && tar zcvf tap-over-https-gui-$(basename ${GITHUB_REF})-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz tap-over-https-gui
+      - uses: "marvinpinto/action-automatic-releases@latest"
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          goos: ${{ matrix.goos }}
-          goarch: ${{ matrix.goarch }}
-          project_path: ./cmd/tap-over-https-gui
-          binary_name: tap-over-https-gui
-          extra_files: README.md
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          files: |
+            LICENSE.txt
+            *.jar
