@@ -1,3 +1,5 @@
 .idea
 /tap-over-https
 /tap-over-https-gui
+/cmd/tap-over-https-gui/Taps.app/Contents/MacOS/Taps
+.DS_Store

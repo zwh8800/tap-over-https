@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+
+<plist version="1.0">
+  <dict>
+
+    <!-- avoid having a blurry icon and text -->
+	<key>NSHighResolutionCapable</key>
+	<string>True</string>
+
+	<!-- avoid showing the app on the Dock -->
+	<key>LSUIElement</key>
+	<string>1</string>
+
+    <key>CFBundleDevelopmentRegion</key>
+    <string>zh_CN</string>
+    <key>CFBundleDisplayName</key>
+    <string>Taps</string>
+    <key>CFBundleExecutable</key>
+    <string>run_as_root.sh</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon.icns</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.lengzzz.Taps</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Taps</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+  </dict>
+</plist>

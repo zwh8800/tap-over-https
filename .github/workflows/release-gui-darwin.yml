@@ -32,8 +32,8 @@ jobs:
           export PATH=${GOPATH}/bin:${GO_HOME}/bin/:$PATH &&
           go version &&
           cd cmd/tap-over-https-gui &&
-          go build &&
-          tar zcvf tap-over-https-gui-$(basename ${GITHUB_REF})-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz tap-over-https-gui &&
+          go build -o Taps.app/Contents/MacOS/Taps &&
+          tar zcvf tap-over-https-gui-$(basename ${GITHUB_REF})-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz Taps.app &&
           ls -lh &&
           echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Release
