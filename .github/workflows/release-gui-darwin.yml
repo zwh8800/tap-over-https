@@ -40,6 +40,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: tap-over-https-gui-${{ env.RELEASE_VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+          files: cmd/tap-over-https-gui/tap-over-https-gui-${{ env.RELEASE_VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
