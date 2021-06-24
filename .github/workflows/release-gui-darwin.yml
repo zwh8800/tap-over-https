@@ -17,8 +17,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: "Build & test"
         run: |
-          cd cmd/tap-over-https-gui && |
-          go build && |
+          cd cmd/tap-over-https-gui &&
+          go build &&
           tar zcvf tap-over-https-gui-$(basename ${GITHUB_REF})-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz tap-over-https-gui
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
@@ -26,4 +26,3 @@ jobs:
           prerelease: false
           files: |
             tap-over-https-gui-$(basename ${GITHUB_REF})-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
-            
