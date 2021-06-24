@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
+	"runtime"
 	"time"
 
 	"github.com/songgao/water"
@@ -14,42 +12,57 @@ import (
 )
 
 type Client struct {
-	addr string
+	addr            string
+	iface           *water.Interface
+	ws              *websocket.Conn
+	broadcastDomain *BroadcastDomain
+	tapID           int
+	wsID            int
 }
 
 func NewClient(addr string) *Client {
-	return &Client{addr: addr}
+	cli := &Client{addr: addr}
+	runtime.SetFinalizer(cli, (*Client).Close)
+	return cli
 }
 
 func (c *Client) Run() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	var err error
 
-	iface, err := water.New(Config)
+	c.iface, err = water.New(Config)
 	if err != nil {
 		log.Panicf("error on water new: %s", err.Error())
 	}
 
-	log.Printf("iface: %s", iface.Name())
+	log.Printf("iface: %s", c.iface.Name())
 
-	ws, _, err := websocket.Dial(ctx, c.addr, &websocket.DialOptions{
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	c.ws, _, err = websocket.Dial(ctx, c.addr, &websocket.DialOptions{
 		CompressionMode: websocket.CompressionDisabled,
 	})
 	if err != nil {
 		log.Panicf("error on websocket.Dial: %s", err.Error())
 	}
 
-	handleIPAssign(ctx, ws, iface)
+	c.handleIPAssign()
 
-	broadcastDomain := NewBroadcastDomain()
-	broadcastDomain.Join(iface, true)
-	id := broadcastDomain.Join(wsWrapper{ws}, false)
-
-	waitSignal(syscall.SIGINT, syscall.SIGTERM)
-	broadcastDomain.Leave(id)
+	c.broadcastDomain = NewBroadcastDomain()
+	c.tapID = c.broadcastDomain.Join(c.iface, true)
+	c.wsID = c.broadcastDomain.Join(wsWrapper{c.ws}, false)
 }
 
-func handleIPAssign(ctx context.Context, ws *websocket.Conn, iface *water.Interface) {
-	_, ipMsg, err := ws.Read(ctx)
+func (c *Client) Close() {
+	runtime.SetFinalizer(c, nil)
+	if c.broadcastDomain != nil {
+		c.broadcastDomain.Leave(c.wsID)
+		c.broadcastDomain.Leave(c.tapID)
+	}
+}
+
+func (c *Client) handleIPAssign() {
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+
+	_, ipMsg, err := c.ws.Read(ctx)
 	if err != nil {
 		log.Panicf("error on ws.Read: %s", err.Error())
 	}
@@ -63,11 +76,5 @@ func handleIPAssign(ctx context.Context, ws *websocket.Conn, iface *water.Interf
 	}
 	log.Printf("handleIPAssign: %s", string(ipMsg[1:]))
 
-	setupTapAddr(iface.Name(), &ipBody)
-}
-
-func waitSignal(sig ...os.Signal) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, sig...)
-	<-c
+	setupTapAddr(c.iface.Name(), &ipBody)
 }

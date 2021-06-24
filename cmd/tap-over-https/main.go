@@ -2,6 +2,10 @@ package main
 
 import (
 	"flag"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/zwh8800/tap-over-https/core"
 )
@@ -23,9 +27,17 @@ func main() {
 	} else {
 		client := core.NewClient(cmdAddr)
 		client.Run()
+		waitSignal(syscall.SIGINT, syscall.SIGTERM)
+		client.Close()
+		time.Sleep(5 * time.Second)
 	}
 }
 
+func waitSignal(sig ...os.Signal) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, sig...)
+	<-c
+}
 func parseCmd() {
 	flag.BoolVar(&cmdIsServer, "s", false, "run as server mode")
 	flag.StringVar(&cmdAddr, "addr", ":8012", "vpn server address in client mode\nbind address in server mode")
