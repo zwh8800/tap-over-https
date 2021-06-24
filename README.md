@@ -1,6 +1,9 @@
 # tap-over-https
 
-通过websocket协议建立vpn链接，服务端可以部署在openwrt等linux软路由，客户端目前支持mac、linux，方便在公司等外部环境访问家庭内网。
+通过websocket协议建立vpn链接，服务端可以部署在openwrt等linux软路由，客户端目前支持Windows、mac、linux（有GUI版本），方便在公司等外部环境访问家庭内网。
+
+![telegram-cloud-photo-size-5-6242129696926051448-y.jpg](https://i.loli.net/2021/06/24/OfpDhonMQjiBHJG.jpg)
+![telegram-cloud-photo-size-5-6242129696926051480-x.jpg](https://i.loli.net/2021/06/24/wB8mCbJjTzhauyW.jpg)
 
 ## 使用方法
 
@@ -9,7 +12,11 @@
 方式1: 通过源码安装
 
 ```bash
-go install github.com/zwh8800/tap-over-https@latest
+# 命令行版本
+go install github.com/zwh8800/tap-over-https/cmd/tap-over-https@latest
+
+# GUI版本
+go install github.com/zwh8800/tap-over-https/cmd/tap-over-https-gui@latest
 ```
 
 方式2: 下载预编译包
