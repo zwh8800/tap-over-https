@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"io/ioutil"
+	"encoding/json"
 
 	"github.com/gen2brain/dlgs"
 	"github.com/getlantern/systray"
@@ -71,10 +72,10 @@ func saveConfig() {
 	configDir := path.Join(home, ".config")
 	
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		os.MkdirAll(configDir)
+		os.MkdirAll(configDir, 0755)
 	}
 	
-	err = ioutil.WriteFile(path.Join(configDir, configFileName), message, 0644)
+	err = ioutil.WriteFile(path.Join(configDir, configFileName), data, 0644)
 	if err != nil {
 		return
 	}
