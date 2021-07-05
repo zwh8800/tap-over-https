@@ -4,6 +4,8 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"path"
+	"io/ioutil"
 
 	"github.com/gen2brain/dlgs"
 	"github.com/getlantern/systray"
@@ -15,6 +17,8 @@ var iconStopped []byte
 
 //go:embed icon2.ico
 var iconRunning []byte
+
+const configFileName = "taps"
 
 type runStatus int
 
@@ -29,7 +33,55 @@ var (
 	addr   = "ws://www.baidu.com/vpn"
 )
 
+type configFile struct {
+	Addr string `json: "addr"`
+}
+
+func loadConfig() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	data, err := ioutil.ReadFile(path.Join(home, ".config", configFileName))
+	if err != nil {
+		return
+	}
+	var conf configFile
+	err = json.Unmarshal(data, &conf)
+	if err != nil {
+		return
+	}
+	
+	addr = conf.Addr
+}
+
+func saveConfig() {
+	var conf configFile
+	conf.Addr = addr
+	
+	data, err := json.Marshal(&conf)
+	if err != nil {
+		return
+	}
+	
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	configDir := path.Join(home, ".config")
+	
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		os.MkdirAll(configDir)
+	}
+	
+	err = ioutil.WriteFile(path.Join(configDir, configFileName), message, 0644)
+	if err != nil {
+		return
+	}
+}
+
 func main() {
+	loadConfig()
 	systray.Run(onReady, onExit)
 }
 
@@ -109,6 +161,7 @@ func (m *MainApp) onConfigClick() {
 		}
 		if ok {
 			addr = input
+			saveConfig()
 			if status == runStatusRunning {
 				m.stopClient()
 				m.runClient()
