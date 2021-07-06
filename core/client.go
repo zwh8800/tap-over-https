@@ -36,7 +36,8 @@ func (c *Client) Run() {
 
 	log.Printf("iface: %s", c.iface.Name())
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	c.ws, _, err = websocket.Dial(ctx, c.addr, &websocket.DialOptions{
 		CompressionMode: websocket.CompressionDisabled,
 	})
@@ -60,7 +61,8 @@ func (c *Client) Close() {
 }
 
 func (c *Client) handleIPAssign() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	_, ipMsg, err := c.ws.Read(ctx)
 	if err != nil {

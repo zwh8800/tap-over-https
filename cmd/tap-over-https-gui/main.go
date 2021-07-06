@@ -2,11 +2,11 @@ package main
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
-	"io/ioutil"
-	"encoding/json"
 
 	"github.com/gen2brain/dlgs"
 	"github.com/getlantern/systray"
@@ -35,7 +35,7 @@ var (
 )
 
 type configFile struct {
-	Addr string `json: "addr"`
+	Addr string
 }
 
 func loadConfig() {
@@ -52,29 +52,29 @@ func loadConfig() {
 	if err != nil {
 		return
 	}
-	
+
 	addr = conf.Addr
 }
 
 func saveConfig() {
 	var conf configFile
 	conf.Addr = addr
-	
+
 	data, err := json.Marshal(&conf)
 	if err != nil {
 		return
 	}
-	
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return
 	}
 	configDir := path.Join(home, ".config")
-	
+
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
 		os.MkdirAll(configDir, 0755)
 	}
-	
+
 	err = ioutil.WriteFile(path.Join(configDir, configFileName), data, 0644)
 	if err != nil {
 		return

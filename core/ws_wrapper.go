@@ -26,7 +26,8 @@ func (w wsWrapper) Read(p []byte) (int, error) {
 }
 
 func (w wsWrapper) Write(p []byte) (int, error) {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	err := w.c.Write(ctx, websocket.MessageBinary, append([]byte{PacketTypeData}, p...))
 	if err != nil {
 		return 0, err
