@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"sync"
+	"time"
 )
 
 type BroadcastDomain struct {
@@ -12,11 +13,14 @@ type BroadcastDomain struct {
 	onLeave func(id int)
 }
 
-type broadcastPeer struct {
-	id       int
-	rw       io.ReadWriteCloser
-	mu       sync.Mutex
-	needLock bool
+type BroadcastPeer struct {
+	id            int
+	rw            io.ReadWriteCloser
+	mu            sync.Mutex
+	needLock      bool
+	speed         int64
+	curSpeed      int64
+	lastSpeedTime time.Time
 }
 
 func NewBroadcastDomain() *BroadcastDomain {
@@ -36,12 +40,14 @@ func (b *BroadcastDomain) Join(rw io.ReadWriteCloser, needLock bool) int {
 		log.Panicf("you are so lucky")
 	}
 
-	b.peers.Store(id, &broadcastPeer{
-		id:       id,
-		rw:       rw,
-		mu:       sync.Mutex{},
-		needLock: needLock,
-	})
+	thisPeer := &BroadcastPeer{
+		id:            id,
+		rw:            rw,
+		mu:            sync.Mutex{},
+		needLock:      needLock,
+		lastSpeedTime: time.Now(),
+	}
+	b.peers.Store(id, thisPeer)
 
 	go func() {
 		defer func() {
@@ -57,17 +63,24 @@ func (b *BroadcastDomain) Join(rw io.ReadWriteCloser, needLock bool) int {
 			if err != nil {
 				log.Panicf("error on rw.Read: %s", err.Error())
 			}
+			thisPeer.curSpeed += int64(n)
+			diffTime := time.Now().Sub(thisPeer.lastSpeedTime)
+			if diffTime.Seconds() > 1 {
+				thisPeer.speed = int64(float64(thisPeer.curSpeed) / diffTime.Seconds())
+				thisPeer.lastSpeedTime = time.Now()
+				thisPeer.curSpeed = 0
+			}
 			//log.Printf("Packet From %04d: % x\n", id, buffer[:n])
 
 			var wg sync.WaitGroup
 			b.peers.Range(func(key, value interface{}) bool {
-				peerID, peer := key.(int), value.(*broadcastPeer)
+				peerID, peer := key.(int), value.(*BroadcastPeer)
 
 				if peerID == id {
 					return true
 				}
 				wg.Add(1)
-				go func(peer *broadcastPeer) {
+				go func(peer *BroadcastPeer) {
 					defer wg.Done()
 					defer func() {
 						err := recover()
@@ -97,7 +110,7 @@ func (b *BroadcastDomain) Join(rw io.ReadWriteCloser, needLock bool) int {
 func (b *BroadcastDomain) Leave(id int) {
 	peer, ok := b.peers.LoadAndDelete(id)
 	if ok {
-		peer.(*broadcastPeer).rw.Close()
+		peer.(*BroadcastPeer).rw.Close()
 	}
 	if b.onLeave != nil {
 		b.onLeave(id)
@@ -106,4 +119,12 @@ func (b *BroadcastDomain) Leave(id int) {
 
 func (b *BroadcastDomain) OnLeave(onLeave func(id int)) {
 	b.onLeave = onLeave
+}
+
+func (b *BroadcastDomain) GetPeer(id int) *BroadcastPeer {
+	p, ok := b.peers.Load(id)
+	if ok {
+		return p.(*BroadcastPeer)
+	}
+	return nil
 }

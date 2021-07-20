@@ -11,6 +11,13 @@ import (
 	"nhooyr.io/websocket"
 )
 
+type ClientStatus int
+
+const (
+	ClientStatusStopped ClientStatus = iota
+	ClientStatusRunning
+)
+
 type Client struct {
 	addr            string
 	iface           *water.Interface
@@ -18,6 +25,7 @@ type Client struct {
 	broadcastDomain *BroadcastDomain
 	tapID           int
 	wsID            int
+	status          ClientStatus
 }
 
 func NewClient(addr string) *Client {
@@ -50,14 +58,42 @@ func (c *Client) Run() {
 	c.broadcastDomain = NewBroadcastDomain()
 	c.tapID = c.broadcastDomain.Join(c.iface, true)
 	c.wsID = c.broadcastDomain.Join(wsWrapper{c.ws}, false)
+
+	c.broadcastDomain.OnLeave(c.handleWsClose)
+	c.status = ClientStatusRunning
+}
+
+func (c *Client) handleWsClose(id int) {
+	c.broadcastDomain.OnLeave(nil)
+	c.Close()
 }
 
 func (c *Client) Close() {
 	runtime.SetFinalizer(c, nil)
+	c.status = ClientStatusStopped
 	if c.broadcastDomain != nil {
 		c.broadcastDomain.Leave(c.wsID)
 		c.broadcastDomain.Leave(c.tapID)
 	}
+}
+
+func (c *Client) GetStatus() ClientStatus {
+	return c.status
+}
+
+func (c *Client) GetSpeed() (upSpeed int64, downSpeed int64) {
+	if c.broadcastDomain == nil {
+		return 0, 0
+	}
+	upPeer := c.broadcastDomain.GetPeer(c.tapID)
+	if upPeer != nil {
+		upSpeed = upPeer.speed
+	}
+	downPeer := c.broadcastDomain.GetPeer(c.wsID)
+	if downPeer != nil {
+		downSpeed = downPeer.speed
+	}
+	return upSpeed, downSpeed
 }
 
 func (c *Client) handleIPAssign() {
