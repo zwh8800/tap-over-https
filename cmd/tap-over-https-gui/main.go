@@ -214,11 +214,11 @@ func (m *MainApp) syncSingle() {
 	if client == nil {
 		return
 	}
-	if client.GetStatus() == core.ClientStatusRunning {
+	if client.GetStatus() == core.ClientStatusRunning && status != runStatusRunning {
 		systray.SetIcon(iconRunning)
 		m.mRun.SetTitle("停止")
 		status = runStatusRunning
-	} else if client.GetStatus() == core.ClientStatusStopped {
+	} else if client.GetStatus() == core.ClientStatusStopped && status != runStatusStopped {
 		systray.SetIcon(iconStopped)
 		m.mRun.SetTitle("启动")
 		status = runStatusStopped
